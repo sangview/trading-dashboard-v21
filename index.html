@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Algo-Like Trading Dashboard V21</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .container {
+            max-width: 1400px;
+        }
+        .card {
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 400px;
+            max-height: 400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .chart-container-rsi, .chart-container-macd {
+            position: relative;
+            width: 100%;
+            height: 200px;
+            max-height: 200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        @media (min-width: 1024px) {
+            .chart-container {
+                height: 550px;
+                max-height: 550px;
+            }
+        }
+        .tooltip-container {
+            position: relative;
+            display: inline-block;
+        }
+        .tooltip-text {
+            visibility: hidden;
+            width: 250px;
+            background-color: #555;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px 10px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -125px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .tooltip-container:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+        .tooltip-text::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #555 transparent transparent transparent;
+        }
+        .trading-status-card {
+            display: none;
+            background-color: #e0f2fe;
+            border: 2px solid #3b82f6;
+            padding: 1.5rem;
+            border-radius: 12px;
+        }
+    </style>
+</head>
+<body class="text-slate-900">
+
+    <header class="bg-white shadow-sm">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <h1 class="text-2xl sm:text-3xl font-bold text-slate-900 text-center">Algo-Like Trading Dashboard V21</h1>
+            <p class="text-center text-slate-500 mt-1">Analyse visuelle et plan de trade instantané.</p>
+        </div>
+    </header>
+
+    <main class="container mx-auto p-4 md:p-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+        <!-- Panneau de Saisie et Calcul -->
+        <div class="card">
+            <h2 class="text-2xl font-bold text-center">Vos Paramètres & Plan de Trade</h2>
+            <div>
+                <label for="api-source" class="block font-medium text-slate-700 mb-1">Source de données (API)</label>
+                <select id="api-source" class="w-full p-2 border border-slate-300 rounded-md">
+                    <option value="binance">Binance</option>
+                    <option value="coingecko">CoinGecko</option>
+                </select>
+            </div>
+            <div>
+                <label for="asset" class="block font-medium text-slate-700 mb-1">Actif</label>
+                <select id="asset" class="w-full p-2 border border-slate-300 rounded-md">
+                    <option value="BTCUSDT">BTCUSDT</option>
+                    <option value="ETHUSDT">ETHUSDT</option>
+                    <option value="XRPUSDT">XRPUSDT</option>
+                    <option value="ADAUSDT">ADAUSDT</option>
+                </select>
+            </div>
+            <div>
+                <label for="interval" class="block font-medium text-slate-700 mb-1">Intervalle</label>
+                <select id="interval" class="w-full p-2 border border-slate-300 rounded-md">
+                    <option value="1h">1h</option>
+                    <option value="4h">4h</option>
+                    <option value="1d">1D</option>
+                    <option value="1w">1W</option>
+                </select>
+            </div>
+            <div>
+                <label for="capital" class="block font-medium text-slate-700 mb-1">Capital Total (USDT)</label>
+                <input type="number" id="capital" value="1000" class="w-full p-2 border border-slate-300 rounded-md">
+            </div>
+            <div>
+                <label for="risk" class="block font-medium text-slate-700 mb-1">% de Risque par trade</label>
+                <input type="number" id="risk" value="1" class="w-full p-2 border border-slate-300 rounded-md">
+            </div>
+            <div class="flex justify-between items-center space-x-4">
+              <button id="calculate-btn" class="flex-1 bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors">
+                  Générer plan
+              </button>
+              <button id="refresh-btn" class="flex-1 bg-gray-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-700 transition-colors">
+                  Rafraîchir
+              </button>
+            </div>
+            <div id="exchange-rate-display" class="text-center text-sm text-slate-500 mt-2">Taux de change USD/EUR : Chargement...</div>
+
+            <div id="results" class="space-y-4" style="display: none;">
+                <div class="bg-white p-4 rounded-md shadow-sm border border-slate-200">
+                    <h3 class="font-semibold text-lg mb-2 text-slate-700">Calculs clés</h3>
+                    <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <span class="font-bold text-green-600">Prix d'entrée :</span> <span id="entry-price" class="font-medium">...</span> USDT (<span id="entry-price-eur">...</span> €)
+                        </div>
+                        <div>
+                            <span class="font-bold text-red-600">Stop-Loss :</span> <span id="stop-loss" class="font-medium">...</span> USDT (<span id="stop-loss-eur">...</span> €)
+                        </div>
+                        <div>
+                            <span class="font-bold text-blue-600">
+                                Montant de la position :
+                                <span class="tooltip-container">
+                                    <span class="text-sm font-normal text-slate-500 cursor-pointer">&#9432;</span>
+                                    <span class="tooltip-text text-sm">C'est la valeur totale de l'actif que vous contrôlez, souvent supérieure à votre capital grâce à l'effet de levier.</span>
+                                </span>
+                            </span> 
+                            <span id="position-value" class="font-medium">...</span> USDT (<span id="position-value-eur">...</span> €)
+                        </div>
+                        <div>
+                            <span class="font-bold text-purple-600">
+                                Montant Risqué : 
+                                <span class="tooltip-container">
+                                    <span class="text-sm font-normal text-slate-500 cursor-pointer">&#9432;</span>
+                                    <span class="tooltip-text text-sm">C'est le montant maximum de votre capital que vous êtes prêt à perdre sur ce trade.</span>
+                                </span>
+                            </span>
+                            <span id="risked-amount" class="font-medium">...</span> USDT (<span id="risked-amount-eur">...</span> €)
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-md shadow-sm border border-slate-200">
+                    <h3 class="font-semibold text-lg mb-2 text-slate-700">Objectifs de profit (TP)</h3>
+                    <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <span class="font-bold text-green-600">TP1 (RR 1.5) :</span> <span id="tp1" class="font-medium">...</span> USDT (<span id="tp1-eur">...</span> €)
+                        </div>
+                        <div>
+                            <span class="font-bold text-green-600">Gain Potentiel TP1:</span> <span id="gain-tp1" class="font-medium">...</span> USDT (<span id="gain-tp1-eur">...</span> €)
+                        </div>
+                        <div>
+                            <span class="font-bold text-green-600">TP2 (RR 3) :</span> <span id="tp2" class="font-medium">...</span> USDT (<span id="tp2-eur">...</span> €)
+                        </div>
+                        <div>
+                            <span class="font-bold text-green-600">Gain Potentiel TP2:</span> <span id="gain-tp2" class="font-medium">...</span> USDT (<span id="gain-tp2-eur">...</span> €)
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="loading" class="text-center font-semibold text-blue-600" style="display: none;">Chargement des données...</div>
+            <div id="error-message" class="text-center font-semibold text-red-600" style="display: none;"></div>
+
+            <div id="trading-status-card" class="trading-status-card">
+                <h3 class="text-xl font-bold text-center text-blue-700 mb-4">Suivi de votre trade</h3>
+                <div id="status-message" class="text-center text-lg font-semibold mb-4"></div>
+                <div id="current-price-display" class="text-center text-sm font-medium">Prix Actuel : ... USDT</div>
+                <div id="pnl-display" class="text-center text-sm font-medium">P&L : ... USDT</div>
+                <div class="mt-4 flex justify-center space-x-4">
+                    <button id="exit-btn-tp1" class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition-colors">Sortir (TP1)</button>
+                    <button id="exit-btn-sl" class="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition-colors">Sortir (SL)</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panneau des Graphiques et de l'Analyse -->
+        <div class="card">
+            <h2 id="chartTitle" class="text-2xl font-bold text-center mb-4">Analyse Technique du Marché</h2>
+            <div class="chart-container">
+                <canvas id="tradingChart"></canvas>
+            </div>
+            <div class="chart-container-rsi mt-4">
+                <canvas id="rsiChart"></canvas>
+            </div>
+            <div class="chart-container-macd mt-4">
+                <canvas id="macdChart"></canvas>
+            </div>
+            
+            <div class="mt-8 bg-white p-4 rounded-md shadow-sm border border-slate-200">
+                <h3 class="font-semibold text-lg mb-2 text-slate-700">Analyse Intelligente et Décision</h3>
+                <div id="decision-analysis" class="text-sm text-slate-800">
+                    
+                </div>
+                <div id="enter-position-btn-container" class="mt-4 text-center" style="display:none;">
+                    <button id="enter-position-btn" class="bg-emerald-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-emerald-700 transition-colors">Entrer en position</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="text-center py-6 mt-12 bg-slate-100 text-slate-500 text-sm">
+        <p>Avertissement : Les données de prix proviennent de Binance et CoinGecko, les taux de change proviennent de Frankfurter. Le trading comporte des risques.</p>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const calculateBtn = document.getElementById('calculate-btn');
+            const refreshBtn = document.getElementById('refresh-btn');
+            const enterPositionBtn = document.getElementById('enter-position-btn');
+            const exitBtnTp1 = document.getElementById('exit-btn-tp1');
+            const exitBtnSl = document.getElementById('exit-btn-sl');
+            const loadingDiv = document.getElementById('loading');
+            const errorDiv = document.getElementById('error-message');
+            const resultsDiv = document.getElementById('results');
+            const decisionAnalysisDiv = document.getElementById('decision-analysis');
+            const chartTitle = document.getElementById('chartTitle');
+            const exchangeRateDisplay = document.getElementById('exchange-rate-display');
+            const tradingStatusCard = document.getElementById('trading-status-card');
+            const statusMessage = document.getElementById('status-message');
+            const currentPriceDisplay = document.getElementById('current-price-display');
+            const pnlDisplay = document.getElementById('pnl-display');
+            const enterPositionBtnContainer = document.getElementById('enter-position-btn-container');
+
+            const apiSourceSelect = document.getElementById('api-source');
+            const assetSelect = document.getElementById('asset');
+            const intervalSelect = document.getElementById('interval');
+            const capitalInput = document.getElementById('capital');
+            const riskInput = document.getElementById('risk');
+            const entryPriceSpan = document.getElementById('entry-price');
+            const entryPriceEurSpan = document.getElementById('entry-price-eur');
+            const stopLossSpan = document.getElementById('stop-loss');
+            const stopLossEurSpan = document.getElementById('stop-loss-eur');
+            const riskedAmountSpan = document.getElementById('risked-amount');
+            const riskedAmountEurSpan = document.getElementById('risked-amount-eur');
+            const positionValueSpan = document.getElementById('position-value');
+            const positionValueEurSpan = document.getElementById('position-value-eur');
+            const tp1Span = document.getElementById('tp1');
+            const tp1EurSpan = document = document.getElementById('tp1-eur');
+            const tp2Span = document.getElementById('tp2');
+            const tp2EurSpan = document.getElementById('tp2-eur');
+            const gainTp1Span = document.getElementById('gain-tp1');
+            const gainTp1EurSpan = document.getElementById('gain-tp1-eur');
+            const gainTp2Span = document.getElementById('gain-tp2');
+            const gainTp2EurSpan = document.getElementById('gain-tp2-eur');
+            
+            let currentExchangeRate = 1.0; 
+            const EXCHANGE_RATE_API_URL = 'https://api.frankfurter.app/latest?from=USD&to=EUR';
+            
+            let mainChart;
+            let rsiChart;
+            let macdChart;
+            let currentTrade = null;
+            let intervalId = null;
+
+            async function fetchWithTimeout(url, timeout = 10000) {
+                const controller = new AbortController();
+                const id = setTimeout(() => controller.abort(), timeout);
+                try {
+                    const response = await fetch(url, { signal: controller.signal });
+                    clearTimeout(id);
+                    return response;
+                } catch (error) {
+                    clearTimeout(id);
+                    if (error.name === 'AbortError') {
+                        throw new Error('La requête a expiré. Veuillez réessayer.');
+                    }
+                    throw error;
+                }
+            }
+
+            async function fetchExchangeRate() {
+                exchangeRateDisplay.textContent = 'Taux de change USD/EUR : Chargement...';
+                try {
+                    const response = await fetchWithTimeout(EXCHANGE_RATE_API_URL);
+                    if (!response.ok) {
+                        throw new Error(`Erreur de l'API de taux de change: ${response.statusText}`);
+                    }
+                    const data = await response.json();
+                    const rate = data.rates.EUR;
+                    currentExchangeRate = rate;
+                    exchangeRateDisplay.textContent = `Taux de change USD/EUR : 1 USD = ${rate.toFixed(4)} €`;
+                } catch (error) {
+                    console.error('Erreur lors de la récupération du taux de change:', error);
+                    exchangeRateDisplay.textContent = `Taux de change USD/EUR : Échec du chargement. Utilisation d'un taux par défaut (1 USD = 1.07 €)`;
+                    currentExchangeRate = 1.07;
+                }
+            }
+
+            async function getHistoricalDataFromBinance(symbol, interval, limit = 200) {
+                const url = `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`;
+                const response = await fetchWithTimeout(url);
+                if (!response.ok) {
+                    throw new Error(`API Binance: ${response.status} ${response.statusText}`);
+                }
+                const data = await response.json();
+                return data.map(kline => ({
+                    time: new Date(kline[0]).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                    open: parseFloat(kline[1]),
+                    high: parseFloat(kline[2]),
+                    low: parseFloat(kline[3]),
+                    close: parseFloat(kline[4])
+                }));
+            }
+
+            async function getHistoricalDataFromCoinGecko(asset, interval) {
+                const intervalToDays = { '1h': 7, '4h': 14, '1d': 90, '1w': 365 };
+                const days = intervalToDays[interval] || 90;
+                const assetId = asset.replace('USDT', '').toLowerCase();
+                const url = `https://api.coingecko.com/api/v3/coins/${assetId}/market_chart?vs_currency=usd&days=${days}&interval=daily`;
+                const response = await fetchWithTimeout(url);
+                if (!response.ok) {
+                    throw new Error(`API CoinGecko: ${response.status} ${response.statusText}`);
+                }
+                const data = await response.json();
+                
+                if (!data.prices || data.prices.length === 0) {
+                    throw new Error("Aucune donnée de prix trouvée pour cet actif.");
+                }
+
+                const simplifiedData = data.prices.map(pricePoint => ({
+                    time: new Date(pricePoint[0]).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                    open: pricePoint[1],
+                    high: pricePoint[1],
+                    low: pricePoint[1],
+                    close: pricePoint[1]
+                }));
+
+                return simplifiedData.slice(-200);
+            }
+
+            function calculateEMA(data, period) {
+                if (data.length < period) return [];
+                const ema = new Array(data.length).fill(null);
+                let sum = 0;
+                for (let i = 0; i < period; i++) {
+                    sum += data[i].close;
+                }
+                ema[period - 1] = sum / period;
+                const multiplier = 2 / (period + 1);
+                for (let i = period; i < data.length; i++) {
+                    ema[i] = (data[i].close - ema[i - 1]) * multiplier + ema[i - 1];
+                }
+                return ema;
+            }
+
+            function calculateRSI(candles, period = 14) {
+                if (candles.length < period + 1) return [];
+                let rsi = new Array(candles.length).fill(null);
+                
+                let gains = 0;
+                let losses = 0;
+                for (let i = 1; i <= period; i++) {
+                    let change = candles[i].close - candles[i-1].close;
+                    if (change > 0) {
+                        gains += change;
+                    } else {
+                        losses += Math.abs(change);
+                    }
+                }
+                
+                let avgGain = gains / period;
+                let avgLoss = losses / period;
+                if (avgLoss === 0) {
+                    rsi[period] = 100;
+                } else {
+                    rsi[period] = 100 - (100 / (1 + (avgGain / avgLoss)));
+                }
+
+                for (let i = period + 1; i < candles.length; i++) {
+                    let change = candles[i].close - candles[i-1].close;
+                    let currentGain = change > 0 ? change : 0;
+                    let currentLoss = change < 0 ? Math.abs(change) : 0;
+                    
+                    avgGain = (avgGain * (period - 1) + currentGain) / period;
+                    avgLoss = (avgLoss * (period - 1) + currentLoss) / period;
+                    
+                    if (avgLoss === 0) {
+                        rsi[i] = 100;
+                    } else {
+                        rsi[i] = 100 - (100 / (1 + (avgGain / avgLoss)));
+                    }
+                }
+                return rsi;
+            }
+
+            function calculateMACD(candles) {
+                const ema12 = calculateEMA(candles, 12);
+                const ema26 = calculateEMA(candles, 26);
+                const macdLine = [];
+                for (let i = 25; i < candles.length; i++) {
+                    macdLine.push(ema12[i] - ema26[i]);
+                }
+                const signalLine = calculateEMA(macdLine.map(v => ({ close: v })), 9);
+                return { macdLine, signalLine };
+            }
+            
+            function calculateATR(candles, period = 14) {
+                if (candles.length < period) return 0;
+                let trs = [];
+                for (let i = 1; i < candles.length; i++) {
+                    const tr = Math.max(
+                        candles[i].high - candles[i].low,
+                        Math.abs(candles[i].high - candles[i - 1].close),
+                        Math.abs(candles[i].low - candles[i - 1].close)
+                    );
+                    trs.push(tr);
+                }
+                let atr = trs.slice(0, period).reduce((a, b) => a + b, 0) / period;
+                for(let i = period; i < trs.length; i++) {
+                    atr = (atr * (period - 1) + trs[i]) / period;
+                }
+                return atr;
+            }
+            
+            function calculateBollingerBands(data, period = 20, multiplier = 2) {
+                const closePrices = data.map(d => d.close);
+                const sma = [];
+                const upperBand = [];
+                const lowerBand = [];
+
+                for (let i = 0; i <= closePrices.length - period; i++) {
+                    const slice = closePrices.slice(i, i + period);
+                    const average = slice.reduce((sum, val) => sum + val, 0) / period;
+                    const standardDeviation = Math.sqrt(
+                        slice.map(val => (val - average) ** 2)
+                        .reduce((sum, val) => sum + val, 0) / period
+                    );
+
+                    sma.push(average);
+                    upperBand.push(average + (standardDeviation * multiplier));
+                    lowerBand.push(average - (standardDeviation * multiplier));
+                }
+                return { sma, upperBand, lowerBand };
+            }
+
+            const candlestick = {
+                id: 'candlestick',
+                beforeDatasetsDraw(chart, args, pluginOptions) {
+                    const { ctx, chartArea: { top, bottom, left, right, width, height }, scales: { x, y } } = chart;
+                    ctx.save();
+                    chart.getDatasetMeta(0).data.forEach((dp, i) => {
+                        const { x: xCoord } = dp;
+                        const { open, high, low, close } = chart.data.datasets[0].data[i];
+                        const barWidth = x.getPixelForValue(i + 1) - xCoord;
+                        ctx.beginPath();
+                        ctx.strokeStyle = open < close ? '#4ade80' : '#f87171';
+                        ctx.fillStyle = open < close ? '#4ade80' : '#f87171';
+                        ctx.fillRect(xCoord - barWidth / 2, y.getPixelForValue(Math.max(open, close)), barWidth, y.getPixelForValue(Math.min(open, close)) - y.getPixelForValue(Math.max(open, close)));
+                        ctx.beginPath();
+                        ctx.moveTo(xCoord, y.getPixelForValue(high));
+                        ctx.lineTo(xCoord, y.getPixelForValue(low));
+                        ctx.lineWidth = 1;
+                        ctx.stroke();
+                    });
+                    ctx.restore();
+                }
+            };
+            
+            function createCharts(data, asset, interval) {
+                const labels = data.map(d => d.time);
+                const closePrices = data.map(d => d.close);
+                const ema9 = calculateEMA(data, 9);
+                const ema21 = calculateEMA(data, 21);
+                const rsiData = calculateRSI(data);
+                const macdData = calculateMACD(data);
+                const { upperBand, lowerBand } = calculateBollingerBands(data);
+                const emptyDataPoints = Array(data.length - upperBand.length).fill(null);
+
+                chartTitle.textContent = `Graphique de l'actif ${asset} (${interval})`;
+
+                if (mainChart) {
+                    mainChart.destroy();
+                }
+                if (rsiChart) {
+                    rsiChart.destroy();
+                }
+                if (macdChart) {
+                    macdChart.destroy();
+                }
+                
+                const ctxMain = document.getElementById('tradingChart').getContext('2d');
+                mainChart = new Chart(ctxMain, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Candles',
+                                data: data,
+                                borderColor: 'rgba(0,0,0,0)',
+                                backgroundColor: 'rgba(0,0,0,0)',
+                                parsing: false
+                            },
+                            {
+                                label: 'Prix de clôture',
+                                data: data.map(d => d.close),
+                                borderColor: '#4b5563',
+                                borderWidth: 2,
+                                fill: false,
+                                pointRadius: 0
+                            },
+                            {
+                                label: 'EMA 9',
+                                data: ema9,
+                                borderColor: '#3b82f6',
+                                borderWidth: 2,
+                                fill: false,
+                                pointRadius: 0
+                            },
+                            {
+                                label: 'EMA 21',
+                                data: ema21,
+                                borderColor: '#ef4444',
+                                borderWidth: 2,
+                                fill: false,
+                                pointRadius: 0
+                            },
+                            {
+                                label: 'Bande Supérieure',
+                                data: [...emptyDataPoints, ...upperBand],
+                                borderColor: 'rgba(255, 159, 64, 0.5)',
+                                borderWidth: 1,
+                                fill: false,
+                                pointRadius: 0
+                            },
+                            {
+                                label: 'Bande Inférieure',
+                                data: [...emptyDataPoints, ...lowerBand],
+                                borderColor: 'rgba(255, 159, 64, 0.5)',
+                                borderWidth: 1,
+                                fill: false,
+                                pointRadius: 0
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top',
+                            }
+                        },
+                        scales: {
+                            x: {
+                                type: 'category',
+                                labels: labels
+                            },
+                            y: {
+                                beginAtZero: false
+                            }
+                        }
+                    },
+                    plugins: [candlestick]
+                });
+
+                const ctxRSI = document.getElementById('rsiChart').getContext('2d');
+                rsiChart = new Chart(ctxRSI, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'RSI',
+                                data: rsiData,
+                                borderColor: '#3b82f6',
+                                borderWidth: 2,
+                                fill: false,
+                                pointRadius: 0
+                            },
+                            {
+                                label: 'Suroffre (70)', data: Array(labels.length).fill(70), borderColor: '#f87171', borderWidth: 1, borderDash: [5, 5], fill: false, pointRadius: 0
+                            },
+                            {
+                                label: 'Surdemande (30)', data: Array(labels.length).fill(30), borderColor: '#4ade80', borderWidth: 1, borderDash: [5, 5], fill: false, pointRadius: 0
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: { y: { min: 0, max: 100 } },
+                        plugins: { legend: { display: false } }
+                    }
+                });
+
+                const ctxMACD = document.getElementById('macdChart').getContext('2d');
+                macdChart = new Chart(ctxMACD, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'MACD',
+                                data: [...Array(25).fill(null), ...macdData.macdLine],
+                                borderColor: '#22c55e',
+                                borderWidth: 2,
+                                fill: false,
+                                pointRadius: 0
+                            },
+                            {
+                                label: 'Signal',
+                                data: [...Array(34).fill(null), ...macdData.signalLine],
+                                borderColor: '#ef4444',
+                                borderWidth: 2,
+                                fill: false,
+                                pointRadius: 0
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: true, position: 'top' } },
+                        scales: { x: { type: 'category' } }
+                    }
+                });
+            }
+            
+            function provideTechnicalAnalysis(data, rsiData, ema9, ema21, macdData, entryPrice, stopLoss, riskPercent) {
+                const latestRSI = rsiData[rsiData.length - 1];
+                const latestEMA9 = ema9[ema9.length - 1];
+                const latestEMA21 = ema21[ema21.length - 1];
+                const latestMACD = macdData.macdLine[macdData.macdLine.length - 1];
+                const latestSignal = macdData.signalLine[macdData.signalLine.length - 1];
+
+                let analysis = '';
+                let recommendation = '';
+                let advice = '';
+                let entryMessage = '';
+                let riskMessage = '';
+                let showEnterButton = false;
+
+                // --- Analyse Technique ---
+                analysis += `<p><strong>Analyse des graphiques :</strong></p>`;
+                if (latestEMA9 > latestEMA21) {
+                    analysis += `<p>Le prix (EMA 9) est <strong>au-dessus</strong> de l'EMA 21, ce qui suggère une <strong>tendance haussière</strong> de fond.</p>`;
+                } else {
+                    analysis += `<p>Le prix (EMA 9) est <strong>en dessous</strong> de l'EMA 21, ce qui suggère une <strong>tendance baissière</strong> de fond.</p>`;
+                }
+
+                if (latestRSI > 70) {
+                    analysis += `<p>Le RSI est actuellement à <span class="font-bold text-red-600">${latestRSI.toFixed(2)}</span>, indiquant un état de <strong>suroffre</strong>. Une correction de prix est possible.</p>`;
+                } else if (latestRSI < 30) {
+                    analysis += `<p>Le RSI est actuellement à <span class="font-bold text-green-600">${latestRSI.toFixed(2)}</span>, indiquant un état de <strong>surdemande</strong>. Un rebond de prix est probable.</p>`;
+                } else {
+                    analysis += `<p>Le RSI est à <span class="font-bold">${latestRSI.toFixed(2)}</span>, ce qui est dans une zone neutre. La tendance actuelle n'est pas extrême.</p>`;
+                }
+
+                if (latestMACD > latestSignal) {
+                    analysis += `<p>Le MACD a <strong>croisé à la hausse</strong> sa ligne de signal, un signal haussier.</p>`;
+                } else {
+                    analysis += `<p>Le MACD a <strong>croisé à la baisse</strong> sa ligne de signal, un signal baissier.</p>`;
+                }
+
+                // --- Décision et Recommandation (Algorithmique) ---
+                analysis += `<p class="mt-4"><strong>Décision & Recommandation :</strong></p>`;
+                if (latestEMA9 > latestEMA21 && latestRSI < 70 && latestMACD > latestSignal) {
+                    recommendation = '<span class="text-green-600 font-bold text-xl">ENTRER</span>';
+                    advice = `Les signaux sont haussiers (EMA 9 > EMA 21, MACD > Signal) et le marché n'est pas en surchauffe (RSI < 70). C'est une bonne opportunité pour une position longue.`;
+                    entryMessage = `Il est conseillé d'entrer à l'achat autour de <strong>${entryPrice.toFixed(2)} USDT (${convertToEUR(entryPrice).toFixed(2)} €)</strong>.`;
+                    showEnterButton = true;
+                } else {
+                    recommendation = '<span class="text-gray-600 font-bold text-xl">NE RIEN FAIRE</span>';
+                    advice = `Les signaux sont ambivalents ou contradictoires. Mieux vaut attendre un signal plus clair avant de prendre une décision.`;
+                    entryMessage = `Il est recommandé de ne pas ouvrir de position pour le moment.`;
+                }
+                
+                riskMessage = `Le risque de la position est une perte de <strong>${(entryPrice - stopLoss).toFixed(2)} USDT (${convertToEUR(entryPrice - stopLoss).toFixed(2)} €)</strong> par unité. Ce risque est calculé pour correspondre à <strong>${riskPercent}%</strong> de votre capital total.`;
+
+
+                decisionAnalysisDiv.innerHTML = `
+                    ${analysis}
+                    <p class="mt-4"><strong>Recommandation :</strong> ${recommendation}</p>
+                    <p class="mt-2 text-sm text-slate-500">${advice}</p>
+                    <p class="mt-2"><strong>Point d'entrée :</strong> ${entryMessage}</p>
+                    <p class="mt-2"><strong>Stop-Loss :</strong> Placer le stop-loss à <strong>${stopLoss.toFixed(2)} USDT (${convertToEUR(stopLoss).toFixed(2)} €)</strong> pour limiter les pertes.</p>
+                    <p class="mt-2"><strong>Risque potentiel :</strong> ${riskMessage}</p>
+                `;
+
+                if (showEnterButton) {
+                    enterPositionBtnContainer.style.display = 'block';
+                } else {
+                    enterPositionBtnContainer.style.display = 'none';
+                }
+            }
+
+            async function generateTradePlan() {
+                loadingDiv.style.display = 'block';
+                errorDiv.style.display = 'none';
+                resultsDiv.style.display = 'none';
+                decisionAnalysisDiv.innerHTML = '';
+                enterPositionBtnContainer.style.display = 'none';
+                if (currentTrade) return;
+
+                await fetchExchangeRate();
+
+                const apiSource = apiSourceSelect.value;
+                const asset = assetSelect.value;
+                const interval = intervalSelect.value;
+                const capital = parseFloat(capitalInput.value);
+                const riskPercent = parseFloat(riskInput.value);
+
+                if (isNaN(capital) || isNaN(riskPercent) || capital <= 0 || riskPercent <= 0) {
+                    loadingDiv.style.display = 'none';
+                    errorDiv.textContent = 'Veuillez entrer des valeurs valides pour votre capital et votre risque.';
+                    errorDiv.style.display = 'block';
+                    return;
+                }
+
+                try {
+                    let historicalData;
+                    if (apiSource === 'binance') {
+                        historicalData = await getHistoricalDataFromBinance(asset, interval);
+                    } else if (apiSource === 'coingecko') {
+                        historicalData = await getHistoricalDataFromCoinGecko(asset, interval);
+                    }
+                    
+                    if (historicalData.length === 0) {
+                        throw new Error(`Impossible de charger les données historiques depuis ${apiSource === 'binance' ? 'Binance' : 'CoinGecko'}.`);
+                    }
+
+                    const ema9 = calculateEMA(historicalData, 9);
+                    const ema21 = calculateEMA(historicalData, 21);
+                    const rsiData = calculateRSI(historicalData);
+                    const macdData = calculateMACD(historicalData);
+                    
+                    createCharts(historicalData, asset, interval);
+
+                    const lastCandle = historicalData[historicalData.length - 1];
+                    const entryPrice = lastCandle.close;
+
+                    const atr = calculateATR(historicalData);
+                    const stopLoss = entryPrice - (1.5 * atr);
+
+                    const riskedAmount = (capital * riskPercent) / 100;
+                    const priceRisk = entryPrice - stopLoss;
+                    
+                    if (priceRisk <= 0) {
+                        throw new Error('Calcul du Stop-Loss impossible. Le marché est trop volatile ou le prix d\'entrée est inférieur au Stop-Loss.');
+                    }
+
+                    const positionSize = riskedAmount / priceRisk;
+                    const positionValue = positionSize * entryPrice;
+                    const rewardPerUnit = priceRisk;
+                    const tp1 = entryPrice + (rewardPerUnit * 1.5);
+                    const tp2 = entryPrice + (rewardPerUnit * 3);
+
+                    const gainTp1 = (tp1 - entryPrice) * positionSize;
+                    const gainTp2 = (tp2 - entryPrice) * positionSize;
+
+                    entryPriceSpan.textContent = entryPrice.toFixed(2);
+                    entryPriceEurSpan.textContent = convertToEUR(entryPrice).toFixed(2);
+                    stopLossSpan.textContent = stopLoss.toFixed(2);
+                    stopLossEurSpan.textContent = convertToEUR(stopLoss).toFixed(2);
+                    riskedAmountSpan.textContent = riskedAmount.toFixed(2);
+                    riskedAmountEurSpan.textContent = convertToEUR(riskedAmount).toFixed(2);
+                    positionValueSpan.textContent = positionValue.toFixed(2);
+                    positionValueEurSpan.textContent = convertToEUR(positionValue).toFixed(2);
+                    tp1Span.textContent = tp1.toFixed(2);
+                    tp1EurSpan.textContent = convertToEUR(tp1).toFixed(2);
+                    tp2Span.textContent = tp2.toFixed(2);
+                    tp2EurSpan.textContent = convertToEUR(tp2).toFixed(2);
+
+                    gainTp1Span.textContent = gainTp1.toFixed(2);
+                    gainTp1EurSpan.textContent = convertToEUR(gainTp1).toFixed(2);
+                    gainTp2Span.textContent = gainTp2.toFixed(2);
+                    gainTp2EurSpan.textContent = convertToEUR(gainTp2).toFixed(2);
+
+                    provideTechnicalAnalysis(historicalData, rsiData, ema9, ema21, macdData, entryPrice, stopLoss, riskPercent);
+
+                    loadingDiv.style.display = 'none';
+                    resultsDiv.style.display = 'block';
+
+                    currentTrade = {
+                        asset: asset,
+                        entryPrice: entryPrice,
+                        positionSize: positionSize,
+                        stopLoss: stopLoss,
+                        tp1: tp1,
+                        tp2: tp2,
+                        riskedAmount: riskedAmount,
+                        gainTp1: gainTp1,
+                        gainTp2: gainTp2
+                    };
+
+                } catch (error) {
+                    loadingDiv.style.display = 'none';
+                    errorDiv.textContent = `Erreur: ${error.message}. Veuillez changer la source de données (API) ou réessayer plus tard.`;
+                    errorDiv.style.display = 'block';
+                    console.error('Détails de l\'erreur:', error);
+                }
+            }
+
+            async function startTradeFollowUp() {
+                const symbol = assetSelect.value;
+                const url = `https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`;
+                
+                tradingStatusCard.style.display = 'block';
+                statusMessage.textContent = "Position en cours... Analysant les données en temps réel.";
+
+                if (intervalId) {
+                    clearInterval(intervalId);
+                }
+
+                intervalId = setInterval(async () => {
+                    try {
+                        const response = await fetch(url);
+                        if (!response.ok) throw new Error("API Binance non disponible.");
+                        const data = await response.json();
+                        const currentPrice = parseFloat(data.price);
+                        
+                        currentPriceDisplay.textContent = `Prix Actuel : ${currentPrice.toFixed(2)} USDT`;
+                        
+                        const pnl = (currentPrice - currentTrade.entryPrice) * currentTrade.positionSize;
+                        pnlDisplay.textContent = `P&L : ${pnl.toFixed(2)} USDT`;
+                        pnlDisplay.style.color = pnl >= 0 ? 'green' : 'red';
+                        
+                        if (currentPrice <= currentTrade.stopLoss) {
+                            statusMessage.textContent = "ATTENTION : Stop-Loss atteint ! Sortez de votre position pour limiter les pertes.";
+                            statusMessage.style.color = 'red';
+                            clearInterval(intervalId);
+                        } else if (currentPrice >= currentTrade.tp1) {
+                            statusMessage.textContent = "FELICITATIONS : TP1 atteint ! Envisagez de prendre des profits.";
+                            statusMessage.style.color = 'green';
+                        }
+
+                    } catch (error) {
+                        console.error('Erreur de suivi de trade:', error);
+                        statusMessage.textContent = "Erreur de connexion. Impossible de suivre le trade en temps réel.";
+                        clearInterval(intervalId);
+                    }
+                }, 5000); 
+            }
+
+            function exitTrade() {
+                clearInterval(intervalId);
+                tradingStatusCard.style.display = 'none';
+                currentTrade = null;
+                statusMessage.textContent = '';
+                generateTradePlan();
+            }
+
+            function convertToEUR(usdAmount) {
+                return usdAmount * currentExchangeRate;
+            }
+
+            calculateBtn.addEventListener('click', generateTradePlan);
+            refreshBtn.addEventListener('click', generateTradePlan);
+            apiSourceSelect.addEventListener('change', generateTradePlan);
+            assetSelect.addEventListener('change', generateTradePlan);
+            intervalSelect.addEventListener('change', generateTradePlan);
+            enterPositionBtn.addEventListener('click', startTradeFollowUp);
+            exitBtnTp1.addEventListener('click', exitTrade);
+            exitBtnSl.addEventListener('click', exitTrade);
+            
+            window.onload = generateTradePlan;
+        });
+    </script>
+</body>
+</html>
