@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Algo-Like Trading Dashboard V23</title>
+    <title>Algo-Like Trading Dashboard V24</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -95,7 +95,7 @@
 
     <header class="bg-white shadow-sm">
         <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <h1 class="text-2xl sm:text-3xl font-bold text-slate-900 text-center">Algo-Like Trading Dashboard V23</h1>
+            <h1 class="text-2xl sm:text-3xl font-bold text-slate-900 text-center">Algo-Like Trading Dashboard V24</h1>
             <p class="text-center text-slate-500 mt-1">Analyse visuelle et plan de trade instantané.</p>
         </div>
     </header>
@@ -283,7 +283,7 @@
             const positionValueSpan = document.getElementById('position-value');
             const positionValueEurSpan = document.getElementById('position-value-eur');
             const tp1Span = document.getElementById('tp1');
-            const tp1EurSpan = document.getElementById('tp1-eur');
+            const tp1EurSpan = document = document.getElementById('tp1-eur');
             const tp2Span = document.getElementById('tp2');
             const tp2EurSpan = document.getElementById('tp2-eur');
             const gainTp1Span = document.getElementById('gain-tp1');
@@ -744,7 +744,13 @@
                 resultsDiv.style.display = 'none';
                 decisionAnalysisDiv.innerHTML = '';
                 enterPositionBtnContainer.style.display = 'none';
-                if (currentTrade) return;
+                
+                // Stop the previous follow-up if any
+                if (intervalId) {
+                    clearInterval(intervalId);
+                }
+                currentTrade = null; // Explicitly reset the trade
+                tradingStatusCard.style.display = 'none';
 
                 await fetchExchangeRate();
 
@@ -849,6 +855,11 @@
             }
 
             async function startTradeFollowUp() {
+                if (!currentTrade) {
+                    errorDiv.textContent = "Aucun plan de trade à suivre. Veuillez d'abord générer un plan.";
+                    errorDiv.style.display = 'block';
+                    return;
+                }
                 const symbol = assetSelect.value;
                 const url = `https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`;
                 
