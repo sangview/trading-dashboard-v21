@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Algo-Like Trading Dashboard V24</title>
+    <title>Algo-Like Trading Dashboard & Macro V29</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -89,160 +89,231 @@
             padding: 1.5rem;
             border-radius: 12px;
         }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .chat-container {
+            height: calc(100vh - 250px);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .chat-messages {
+            flex-grow: 1;
+            overflow-y: auto;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .message-user {
+            background-color: #eff6ff;
+            color: #1e40af;
+            align-self: flex-end;
+            padding: 0.75rem;
+            border-radius: 10px;
+            max-width: 80%;
+        }
+        .message-ai {
+            background-color: #f3f4f6;
+            color: #374151;
+            align-self: flex-start;
+            padding: 0.75rem;
+            border-radius: 10px;
+            max-width: 80%;
+        }
     </style>
 </head>
 <body class="text-slate-900">
 
     <header class="bg-white shadow-sm">
-        <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <h1 class="text-2xl sm:text-3xl font-bold text-slate-900 text-center">Algo-Like Trading Dashboard V24</h1>
-            <p class="text-center text-slate-500 mt-1">Analyse visuelle et plan de trade instantané.</p>
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row justify-between items-center">
+            <h1 class="text-2xl sm:text-3xl font-bold text-slate-900 text-center sm:text-left">Algo-Like Trading Dashboard V29</h1>
+            <div class="flex space-x-4 mt-4 sm:mt-0">
+                <button id="tab-dashboard" class="px-4 py-2 font-semibold text-blue-600 border-b-2 border-blue-600 transition-colors duration-300">
+                    Tableau de bord de trading
+                </button>
+                <button id="tab-macro" class="px-4 py-2 font-semibold text-gray-500 hover:text-blue-600 transition-colors duration-300">
+                    Analyse Macro
+                </button>
+            </div>
         </div>
     </header>
 
-    <main class="container mx-auto p-4 md:p-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <main class="container mx-auto p-4 md:p-8">
 
-        <!-- Panneau de Saisie et Calcul -->
-        <div class="card">
-            <h2 class="text-2xl font-bold text-center">Vos Paramètres & Plan de Trade</h2>
-            <div>
-                <label for="api-source" class="block font-medium text-slate-700 mb-1">Source de données (API)</label>
-                <select id="api-source" class="w-full p-2 border border-slate-300 rounded-md">
-                    <option value="binance">Binance</option>
-                    <option value="coingecko">CoinGecko</option>
-                </select>
-            </div>
-            <div>
-                <label for="asset" class="block font-medium text-slate-700 mb-1">Actif</label>
-                <select id="asset" class="w-full p-2 border border-slate-300 rounded-md">
-                    <option value="BTCUSDT">BTCUSDT</option>
-                    <option value="ETHUSDT">ETHUSDT</option>
-                    <option value="XRPUSDT">XRPUSDT</option>
-                    <option value="ADAUSDT">ADAUSDT</option>
-                </select>
-            </div>
-            <div>
-                <label for="interval" class="block font-medium text-slate-700 mb-1">Intervalle</label>
-                <select id="interval" class="w-full p-2 border border-slate-300 rounded-md">
-                    <option value="1h">1h</option>
-                    <option value="4h">4h</option>
-                    <option value="1d">1D</option>
-                    <option value="1w">1W</option>
-                </select>
-            </div>
-            <div>
-                <label for="capital" class="block font-medium text-slate-700 mb-1">Capital Total (USDT)</label>
-                <input type="number" id="capital" value="1000" class="w-full p-2 border border-slate-300 rounded-md">
-            </div>
-            <div>
-                <label for="risk" class="block font-medium text-slate-700 mb-1">% de Risque par trade</label>
-                <input type="number" id="risk" value="1" class="w-full p-2 border border-slate-300 rounded-md">
-            </div>
-            <div class="flex justify-between items-center space-x-4">
-              <button id="calculate-btn" class="flex-1 bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors">
-                  Générer plan
-              </button>
-              <button id="refresh-btn" class="flex-1 bg-gray-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-700 transition-colors">
-                  Rafraîchir
-              </button>
-            </div>
-            <div id="exchange-rate-display" class="text-center text-sm text-slate-500 mt-2">Taux de change USD/EUR : Chargement...</div>
+        <!-- Tableau de bord de trading -->
+        <div id="trading-dashboard-tab" class="tab-content active grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Panneau de Saisie et Calcul -->
+            <div class="card">
+                <h2 class="text-2xl font-bold text-center">Vos Paramètres & Plan de Trade</h2>
+                <div>
+                    <label for="api-source" class="block font-medium text-slate-700 mb-1">Source de données (API)</label>
+                    <select id="api-source" class="w-full p-2 border border-slate-300 rounded-md">
+                        <option value="binance">Binance</option>
+                        <option value="coingecko">CoinGecko</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="asset" class="block font-medium text-slate-700 mb-1">Actif</label>
+                    <select id="asset" class="w-full p-2 border border-slate-300 rounded-md">
+                        <option value="BTCUSDT">BTCUSDT</option>
+                        <option value="ETHUSDT">ETHUSDT</option>
+                        <option value="XRPUSDT">XRPUSDT</option>
+                        <option value="ADAUSDT">ADAUSDT</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="interval" class="block font-medium text-slate-700 mb-1">Intervalle</label>
+                    <select id="interval" class="w-full p-2 border border-slate-300 rounded-md">
+                        <option value="1h">1h</option>
+                        <option value="4h">4h</option>
+                        <option value="1d">1D</option>
+                        <option value="1w">1W</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="capital" class="block font-medium text-slate-700 mb-1">Capital Total (USDT)</label>
+                    <input type="number" id="capital" value="1000" class="w-full p-2 border border-slate-300 rounded-md">
+                </div>
+                <div>
+                    <label for="risk" class="block font-medium text-slate-700 mb-1">% de Risque par trade</label>
+                    <input type="number" id="risk" value="1" class="w-full p-2 border border-slate-300 rounded-md">
+                </div>
+                <div>
+                    <label for="fees" class="block font-medium text-slate-700 mb-1">% de Frais de transaction (par trade)</label>
+                    <input type="number" id="fees" value="0.1" step="0.01" class="w-full p-2 border border-slate-300 rounded-md">
+                </div>
+                <div class="flex justify-between items-center space-x-4">
+                  <button id="calculate-btn" class="flex-1 bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors">
+                      Générer plan
+                  </button>
+                  <button id="refresh-btn" class="flex-1 bg-gray-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-700 transition-colors">
+                      Rafraîchir
+                  </button>
+                </div>
+                <div id="exchange-rate-display" class="text-center text-sm text-slate-500 mt-2">Taux de change USD/EUR : Chargement...</div>
 
-            <div id="results" class="space-y-4" style="display: none;">
-                <div class="bg-white p-4 rounded-md shadow-sm border border-slate-200">
-                    <h3 class="font-semibold text-lg mb-2 text-slate-700">Calculs clés</h3>
-                    <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                            <span class="font-bold text-green-600">Prix d'entrée :</span> <span id="entry-price" class="font-medium">...</span> USDT (<span id="entry-price-eur">...</span> €)
-                        </div>
-                        <div>
-                            <span class="font-bold text-red-600">Stop-Loss :</span> <span id="stop-loss" class="font-medium">...</span> USDT (<span id="stop-loss-eur">...</span> €)
-                        </div>
-                        <div>
-                            <span class="font-bold text-blue-600">
-                                Montant de la position :
-                                <span class="tooltip-container">
-                                    <span class="text-sm font-normal text-slate-500 cursor-pointer">&#9432;</span>
-                                    <span class="tooltip-text text-sm">C'est la valeur totale de l'actif que vous contrôlez, souvent supérieure à votre capital grâce à l'effet de levier.</span>
+                <div id="results" class="space-y-4" style="display: none;">
+                    <div class="bg-white p-4 rounded-md shadow-sm border border-slate-200">
+                        <h3 class="font-semibold text-lg mb-2 text-slate-700">Calculs clés</h3>
+                        <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <span class="font-bold text-green-600">Prix d'entrée :</span> <span id="entry-price" class="font-medium">...</span> USDT (<span id="entry-price-eur">...</span> €)
+                            </div>
+                            <div>
+                                <span class="font-bold text-red-600">Stop-Loss :</span> <span id="stop-loss" class="font-medium">...</span> USDT (<span id="stop-loss-eur">...</span> €)
+                            </div>
+                            <div>
+                                <span class="font-bold text-blue-600">
+                                    Montant de la position :
+                                    <span class="tooltip-container">
+                                        <span class="text-sm font-normal text-slate-500 cursor-pointer">&#9432;</span>
+                                        <span class="tooltip-text text-sm">C'est la valeur totale de l'actif que vous contrôlez, souvent supérieure à votre capital grâce à l'effet de levier.</span>
+                                    </span>
                                 </span>
-                            </span> 
-                            <span id="position-value" class="font-medium">...</span> USDT (<span id="position-value-eur">...</span> €)
-                        </div>
-                        <div>
-                            <span class="font-bold text-purple-600">
-                                Montant Risqué : 
-                                <span class="tooltip-container">
-                                    <span class="text-sm font-normal text-slate-500 cursor-pointer">&#9432;</span>
-                                    <span class="tooltip-text text-sm">C'est le montant maximum de votre capital que vous êtes prêt à perdre sur ce trade.</span>
-                                
+                                <span id="position-value" class="font-medium">...</span> USDT (<span id="position-value-eur">...</span> €)
+                            </div>
+                            <div>
+                                <span class="font-bold text-purple-600">
+                                    Montant Risqué :
+                                    <span class="tooltip-container">
+                                        <span class="text-sm font-normal text-slate-500 cursor-pointer">&#9432;</span>
+                                        <span class="tooltip-text text-sm">C'est le montant maximum de votre capital que vous êtes prêt à perdre sur ce trade.</span>
+
+                                    </span>
                                 </span>
-                            </span>
-                            <span id="risked-amount" class="font-medium">...</span> USDT (<span id="risked-amount-eur">...</span> €)
+                                <span id="risked-amount" class="font-medium">...</span> USDT (<span id="risked-amount-eur">...</span> €)
+                            </div>
+                            <div>
+                                <span class="font-bold text-gray-600">Frais Totaux:</span> <span id="total-fees" class="font-medium">...</span> USDT
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white p-4 rounded-md shadow-sm border border-slate-200">
+                        <h3 class="font-semibold text-lg mb-2 text-slate-700">Objectifs de profit (TP)</h3>
+                        <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <span class="font-bold text-green-600">TP1 (RR 1.5) :</span> <span id="tp1" class="font-medium">...</span> USDT (<span id="tp1-eur">...</span> €)
+                            </div>
+                            <div>
+                                <span class="font-bold text-green-600">Gain Potentiel Net TP1:</span> <span id="gain-tp1" class="font-medium">...</span> USDT (<span id="gain-tp1-eur">...</span> €)
+                            </div>
+                            <div>
+                                <span class="font-bold text-green-600">TP2 (RR 3) :</span> <span id="tp2" class="font-medium">...</span> USDT (<span id="tp2-eur">...</span> €)
+                            </div>
+                            <div>
+                                <span class="font-bold text-green-600">Gain Potentiel Net TP2:</span> <span id="gain-tp2" class="font-medium">...</span> USDT (<span id="gain-tp2-eur">...</span> €)
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="bg-white p-4 rounded-md shadow-sm border border-slate-200">
-                    <h3 class="font-semibold text-lg mb-2 text-slate-700">Objectifs de profit (TP)</h3>
-                    <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                            <span class="font-bold text-green-600">TP1 (RR 1.5) :</span> <span id="tp1" class="font-medium">...</span> USDT (<span id="tp1-eur">...</span> €)
-                        </div>
-                        <div>
-                            <span class="font-bold text-green-600">Gain Potentiel TP1:</span> <span id="gain-tp1" class="font-medium">...</span> USDT (<span id="gain-tp1-eur">...</span> €)
-                        </div>
-                        <div>
-                            <span class="font-bold text-green-600">TP2 (RR 3) :</span> <span id="tp2" class="font-medium">...</span> USDT (<span id="tp2-eur">...</span> €)
-                        </div>
-                        <div>
-                            <span class="font-bold text-green-600">Gain Potentiel TP2:</span> <span id="gain-tp2" class="font-medium">...</span> USDT (<span id="gain-tp2-eur">...</span> €)
-                        </div>
+                <div id="loading" class="text-center font-semibold text-blue-600" style="display: none;">Chargement des données...</div>
+                <div id="error-message" class="text-center font-semibold text-red-600" style="display: none;"></div>
+
+                <div id="trading-status-card" class="trading-status-card">
+                    <h3 class="text-xl font-bold text-center text-blue-700 mb-4">Suivi de votre trade</h3>
+                    <div id="status-message" class="text-center text-lg font-semibold mb-4"></div>
+                    <div id="current-price-display" class="text-center text-sm font-medium">Prix Actuel : ... USDT</div>
+                    <div id="pnl-display" class="text-center text-sm font-medium">P&L : ... USDT</div>
+                    <div class="mt-4 flex justify-center space-x-4">
+                        <button id="exit-btn-tp1" class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition-colors">Sortir (TP1)</button>
+                        <button id="exit-btn-sl" class="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition-colors">Sortir (SL)</button>
+                    </div>
+                </div>
+
+                <div id="trade-history-card" class="bg-white p-4 rounded-md shadow-sm border border-slate-200 mt-4">
+                    <h3 class="font-semibold text-lg mb-2 text-slate-700">Historique des Trades</h3>
+                    <div id="trade-history-list" class="space-y-2 text-sm">
+                        <p class="text-slate-500">Pas encore d'historique de trade.</p>
                     </div>
                 </div>
             </div>
-            <div id="loading" class="text-center font-semibold text-blue-600" style="display: none;">Chargement des données...</div>
-            <div id="error-message" class="text-center font-semibold text-red-600" style="display: none;"></div>
 
-            <div id="trading-status-card" class="trading-status-card">
-                <h3 class="text-xl font-bold text-center text-blue-700 mb-4">Suivi de votre trade</h3>
-                <div id="status-message" class="text-center text-lg font-semibold mb-4"></div>
-                <div id="current-price-display" class="text-center text-sm font-medium">Prix Actuel : ... USDT</div>
-                <div id="pnl-display" class="text-center text-sm font-medium">P&L : ... USDT</div>
-                <div class="mt-4 flex justify-center space-x-4">
-                    <button id="exit-btn-tp1" class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition-colors">Sortir (TP1)</button>
-                    <button id="exit-btn-sl" class="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition-colors">Sortir (SL)</button>
+            <!-- Panneau des Graphiques et de l'Analyse -->
+            <div class="card">
+                <h2 id="chartTitle" class="text-2xl font-bold text-center mb-4">Analyse Technique du Marché</h2>
+                <div class="chart-container">
+                    <canvas id="tradingChart"></canvas>
+                </div>
+                <div class="chart-container-rsi mt-4">
+                    <canvas id="rsiChart"></canvas>
+                </div>
+                <div class="chart-container-macd mt-4">
+                    <canvas id="macdChart"></canvas>
+                </div>
+
+                <div class="mt-8 bg-white p-4 rounded-md shadow-sm border border-slate-200">
+                    <h3 class="font-semibold text-lg mb-2 text-slate-700">Analyse Intelligente et Décision</h3>
+                    <div id="decision-analysis" class="text-sm text-slate-800">
+
+                    </div>
+                    <div id="enter-position-btn-container" class="mt-4 text-center" style="display:none;">
+                        <button id="enter-position-btn" class="bg-emerald-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-emerald-700 transition-colors">Entrer en position</button>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Panneau des Graphiques et de l'Analyse -->
-        <div class="card">
-            <h2 id="chartTitle" class="text-2xl font-bold text-center mb-4">Analyse Technique du Marché</h2>
-            <div class="chart-container">
-                <canvas id="tradingChart"></canvas>
-            </div>
-            <div class="chart-container-rsi mt-4">
-                <canvas id="rsiChart"></canvas>
-            </div>
-            <div class="chart-container-macd mt-4">
-                <canvas id="macdChart"></canvas>
-            </div>
-            
-            <div class="mt-8 bg-white p-4 rounded-md shadow-sm border border-slate-200">
-                <h3 class="font-semibold text-lg mb-2 text-slate-700">Analyse Intelligente et Décision</h3>
-                <div id="decision-analysis" class="text-sm text-slate-800">
-                    
+        <!-- Analyse Macro -->
+        <div id="macro-analysis-tab" class="tab-content">
+            <div class="card p-6 chat-container">
+                <h2 class="text-2xl font-bold text-center mb-4">Assistant d'Analyse Macroéconomique</h2>
+                <div id="chat-messages" class="chat-messages p-4 rounded-lg bg-gray-50 flex-grow overflow-y-auto mb-4">
+                    <div class="message-ai">Bonjour ! Je suis votre assistant d'analyse macroéconomique. Posez-moi une question sur l'économie mondiale ou les politiques monétaires pour commencer.</div>
                 </div>
-                <div id="enter-position-btn-container" class="mt-4 text-center" style="display:none;">
-                    <button id="enter-position-btn" class="bg-emerald-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-emerald-700 transition-colors">Entrer en position</button>
-                </div>
-            </div>
-            <div class="mt-4 bg-white p-4 rounded-md shadow-sm border border-slate-200">
-                <h3 class="font-semibold text-lg mb-2 text-slate-700">Analyse Macroéconomique</h3>
-                <div id="macro-analysis" class="text-sm text-slate-800">
-                    
+                <div class="flex space-x-4">
+                    <input type="text" id="chat-input" placeholder="Tapez votre question ici..." class="flex-grow p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <button id="chat-send-btn" class="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors">Envoyer</button>
                 </div>
             </div>
         </div>
+
     </main>
 
     <footer class="text-center py-6 mt-12 bg-slate-100 text-slate-500 text-sm">
@@ -260,7 +331,6 @@
             const errorDiv = document.getElementById('error-message');
             const resultsDiv = document.getElementById('results');
             const decisionAnalysisDiv = document.getElementById('decision-analysis');
-            const macroAnalysisDiv = document.getElementById('macro-analysis');
             const chartTitle = document.getElementById('chartTitle');
             const exchangeRateDisplay = document.getElementById('exchange-rate-display');
             const tradingStatusCard = document.getElementById('trading-status-card');
@@ -268,12 +338,14 @@
             const currentPriceDisplay = document.getElementById('current-price-display');
             const pnlDisplay = document.getElementById('pnl-display');
             const enterPositionBtnContainer = document.getElementById('enter-position-btn-container');
+            const tradeHistoryList = document.getElementById('trade-history-list');
 
             const apiSourceSelect = document.getElementById('api-source');
             const assetSelect = document.getElementById('asset');
             const intervalSelect = document.getElementById('interval');
             const capitalInput = document.getElementById('capital');
             const riskInput = document.getElementById('risk');
+            const feesInput = document.getElementById('fees');
             const entryPriceSpan = document.getElementById('entry-price');
             const entryPriceEurSpan = document.getElementById('entry-price-eur');
             const stopLossSpan = document.getElementById('stop-loss');
@@ -290,16 +362,129 @@
             const gainTp1EurSpan = document.getElementById('gain-tp1-eur');
             const gainTp2Span = document.getElementById('gain-tp2');
             const gainTp2EurSpan = document.getElementById('gain-tp2-eur');
-            
-            let currentExchangeRate = 1.0; 
+            const totalFeesSpan = document.getElementById('total-fees');
+
+            // Tab elements
+            const tabDashboardBtn = document.getElementById('tab-dashboard');
+            const tabMacroBtn = document.getElementById('tab-macro');
+            const tradingDashboardTab = document.getElementById('trading-dashboard-tab');
+            const macroAnalysisTab = document.getElementById('macro-analysis-tab');
+
+            // Chatbot elements
+            const chatMessages = document.getElementById('chat-messages');
+            const chatInput = document.getElementById('chat-input');
+            const chatSendBtn = document.getElementById('chat-send-btn');
+            const apiKey = "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+            let chatHistory = [{
+                role: "user",
+                parts: [{ text: "Bonjour, je suis un trader. Agis comme mon assistant d'analyse macroéconomique. Je te poserai des questions sur des événements ou des tendances économiques, et tu me donneras une analyse concise et un avis sur leur impact potentiel sur les marchés financiers, en particulier sur les cryptomonnaies." }]
+            }];
+
+            let currentExchangeRate = 1.0;
             const EXCHANGE_RATE_API_URL = 'https://api.frankfurter.app/latest?from=USD&to=EUR';
-            
+
             let mainChart;
             let rsiChart;
             let macdChart;
             let currentTrade = null;
             let intervalId = null;
+            let tradeHistory = [];
 
+            // --- Tab Switching Logic ---
+            function showTab(tabId) {
+                document.querySelectorAll('.tab-content').forEach(tab => {
+                    tab.classList.remove('active');
+                });
+                document.getElementById(tabId).classList.add('active');
+
+                document.querySelectorAll('header button').forEach(btn => {
+                    btn.classList.remove('border-blue-600', 'text-blue-600');
+                    btn.classList.add('text-gray-500', 'hover:text-blue-600');
+                    btn.style.borderBottomWidth = '2px';
+                    btn.style.borderColor = 'transparent';
+                });
+
+                const activeBtn = document.getElementById('tab-' + tabId.replace('-tab', ''));
+                if (activeBtn) {
+                    activeBtn.classList.add('border-blue-600', 'text-blue-600');
+                    activeBtn.classList.remove('text-gray-500', 'hover:text-blue-600');
+                }
+            }
+
+            tabDashboardBtn.addEventListener('click', () => showTab('trading-dashboard-tab'));
+            tabMacroBtn.addEventListener('click', () => showTab('macro-analysis-tab'));
+            showTab('trading-dashboard-tab'); // Show dashboard by default
+
+            // --- Chatbot Logic ---
+            async function sendMessage() {
+                const prompt = chatInput.value.trim();
+                if (prompt === '') return;
+
+                // Add user message to chat history and display it
+                chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+                displayMessage(prompt, 'user');
+                chatInput.value = '';
+
+                // Show a loading message from the AI
+                const loadingMessage = document.createElement('div');
+                loadingMessage.textContent = 'L\'IA est en train de réfléchir...';
+                loadingMessage.className = 'message-ai opacity-50 italic';
+                chatMessages.appendChild(loadingMessage);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{ role: "user", parts: [{ text: prompt }] }],
+                            systemInstruction: {
+                                parts: [{ text: "Agis comme un expert en analyse macroéconomique et en marchés financiers. Réponds aux questions des utilisateurs sur les événements économiques, les politiques monétaires et leur impact potentiel sur les marchés, en particulier les cryptomonnaies. Tes réponses doivent être concises et faciles à comprendre pour un trader. Maintiens un ton professionnel et informatif." }]
+                            },
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`API error: ${response.status}`);
+                    }
+                    const result = await response.json();
+                    const aiResponse = result.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                    // Remove loading message
+                    chatMessages.removeChild(loadingMessage);
+
+                    if (aiResponse) {
+                        chatHistory.push({ role: "model", parts: [{ text: aiResponse }] });
+                        displayMessage(aiResponse, 'ai');
+                    } else {
+                        displayMessage('Désolé, je n\'ai pas pu générer de réponse. Veuillez réessayer.', 'ai');
+                    }
+
+                } catch (error) {
+                    console.error('Error with AI API:', error);
+                    chatMessages.removeChild(loadingMessage);
+                    displayMessage('Désolé, il y a eu une erreur de connexion. Veuillez réessayer.', 'ai');
+                }
+            }
+
+            function displayMessage(text, sender) {
+                const messageElement = document.createElement('div');
+                messageElement.className = sender === 'user' ? 'message-user' : 'message-ai';
+                messageElement.textContent = text;
+                chatMessages.appendChild(messageElement);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+
+            chatSendBtn.addEventListener('click', sendMessage);
+            chatInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    sendMessage();
+                }
+            });
+
+
+            // --- Trading Dashboard Logic ---
             async function fetchWithTimeout(url, timeout = 10000) {
                 const controller = new AbortController();
                 const id = setTimeout(() => controller.abort(), timeout);
@@ -315,6 +500,26 @@
                     throw error;
                 }
             }
+
+            async function getJsonWithRetry(url, options = {}, retries = 3, delay = 1000) {
+                for (let i = 0; i < retries; i++) {
+                    try {
+                        const response = await fetch(url, options);
+                        if (!response.ok) {
+                            throw new Error(`Erreur HTTP: ${response.status}`);
+                        }
+                        return await response.json();
+                    } catch (error) {
+                        console.error(`Tentative ${i + 1} échouée.`, error);
+                        if (i < retries - 1) {
+                            await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, i)));
+                        } else {
+                            throw error;
+                        }
+                    }
+                }
+            }
+
 
             async function fetchExchangeRate() {
                 exchangeRateDisplay.textContent = 'Taux de change USD/EUR : Chargement...';
@@ -360,7 +565,7 @@
                     throw new Error(`API CoinGecko: ${response.status} ${response.statusText}`);
                 }
                 const data = await response.json();
-                
+
                 if (!data.prices || data.prices.length === 0) {
                     throw new Error("Aucune donnée de prix trouvée pour cet actif.");
                 }
@@ -394,7 +599,7 @@
             function calculateRSI(candles, period = 14) {
                 if (candles.length < period + 1) return [];
                 let rsi = new Array(candles.length).fill(null);
-                
+
                 let gains = 0;
                 let losses = 0;
                 for (let i = 1; i <= period; i++) {
@@ -405,7 +610,7 @@
                         losses += Math.abs(change);
                     }
                 }
-                
+
                 let avgGain = gains / period;
                 let avgLoss = losses / period;
                 if (avgLoss === 0) {
@@ -418,10 +623,10 @@
                     let change = candles[i].close - candles[i-1].close;
                     let currentGain = change > 0 ? change : 0;
                     let currentLoss = change < 0 ? Math.abs(change) : 0;
-                    
+
                     avgGain = (avgGain * (period - 1) + currentGain) / period;
                     avgLoss = (avgLoss * (period - 1) + currentLoss) / period;
-                    
+
                     if (avgLoss === 0) {
                         rsi[i] = 100;
                     } else {
@@ -441,7 +646,7 @@
                 const signalLine = calculateEMA(macdLine.map(v => ({ close: v })), 9);
                 return { macdLine, signalLine };
             }
-            
+
             function calculateATR(candles, period = 14) {
                 if (candles.length < period) return 0;
                 let trs = [];
@@ -459,7 +664,7 @@
                 }
                 return atr;
             }
-            
+
             function calculateBollingerBands(data, period = 20, multiplier = 2) {
                 const closePrices = data.map(d => d.close);
                 const sma = [];
@@ -503,7 +708,7 @@
                     ctx.restore();
                 }
             };
-            
+
             function createCharts(data, asset, interval) {
                 const labels = data.map(d => d.time);
                 const closePrices = data.map(d => d.close);
@@ -525,7 +730,7 @@
                 if (macdChart) {
                     macdChart.destroy();
                 }
-                
+
                 const ctxMain = document.getElementById('tradingChart').getContext('2d');
                 mainChart = new Chart(ctxMain, {
                     type: 'line',
@@ -666,27 +871,7 @@
                 });
             }
 
-            function getMacroData() {
-                const inflationStatus = Math.random() > 0.6 ? 'haute' : 'stable';
-                const interestRateStatus = Math.random() > 0.7 ? 'haussiers' : 'stables ou baissiers';
-                const employmentStatus = Math.random() > 0.5 ? 'robuste' : 'faible';
-                const marketSentiment = Math.random() > 0.5 ? 'haussier' : 'baissier';
-
-                let macroAnalysisText = `<p>Voici une analyse simplifiée des conditions macroéconomiques pour votre actif :</p>`;
-                
-                macroAnalysisText += `<ul class="list-disc list-inside mt-2">`;
-                macroAnalysisText += `<li><strong>Inflation :</strong> L'inflation est <strong>${inflationStatus}</strong>. Une inflation élevée peut pousser les banques centrales à augmenter les taux d'intérêt.</li>`;
-                macroAnalysisText += `<li><strong>Taux d'intérêt :</strong> Les taux d'intérêt semblent <strong>${interestRateStatus}</strong>. Des taux d'intérêt haussiers rendent l'accès au capital plus cher et peuvent nuire aux actifs risqués.</li>`;
-                macroAnalysisText += `<li><strong>Emploi :</strong> Le marché de l'emploi est <strong>${employmentStatus}</strong>. Une économie stable est généralement bonne pour les marchés, mais un marché trop fort peut entraîner des mesures de resserrement.</li>`;
-                macroAnalysisText += `<li><strong>Sentiment du marché :</strong> Le sentiment général du marché est <strong>${marketSentiment}</strong>. C'est un indicateur clé de la direction à court terme des investisseurs.</li>`;
-                macroAnalysisText += `</ul>`;
-
-                macroAnalysisDiv.innerHTML = macroAnalysisText;
-
-                return { inflationStatus, interestRateStatus, employmentStatus, marketSentiment };
-            }
-
-            function provideTechnicalAnalysis(data, rsiData, ema9, ema21, macdData, entryPrice, stopLoss, riskPercent, macroData) {
+            function provideTechnicalAnalysis(data, rsiData, ema9, ema21, macdData, entryPrice, stopLoss, riskPercent) {
                 const latestRSI = rsiData[rsiData.length - 1];
                 const latestEMA9 = ema9[ema9.length - 1];
                 const latestEMA21 = ema21[ema21.length - 1];
@@ -695,7 +880,7 @@
 
                 let analysis = '';
                 let technicalSignal = 'neutre';
-                
+
                 // --- Analyse Technique ---
                 if (latestEMA9 > latestEMA21 && latestRSI < 70 && latestMACD > latestSignal) {
                     technicalSignal = 'haussier';
@@ -705,21 +890,17 @@
                     analysis += `<p><strong>Analyse Technique :</strong> Les signaux sont <strong>baissiers ou neutres</strong>. Mieux vaut attendre un signal plus clair avant de prendre une décision.</p>`;
                 }
 
-                // --- Fusion de l'Analyse (Technique + Macro) ---
                 let finalDecision = 'Attendre';
-                let advice = 'Les signaux sont ambivalents ou contradictoires. Mieux vaut attendre un signal plus clair avant de prendre une décision.';
+                let advice = `Les signaux sont ambivalents ou contradictoires. Mieux vaut attendre un signal plus clair avant de prendre une décision.`;
                 let showEnterButton = false;
 
-                if (macroData.marketSentiment === 'baissier') {
-                    finalDecision = 'Sortir';
-                    advice = `Malgré d'éventuels signaux techniques positifs, le sentiment macroéconomique est fortement baissier. Il est conseillé de rester à l'écart ou de sortir de vos positions pour éviter les risques.`;
-                } else if (technicalSignal === 'haussier' && macroData.marketSentiment === 'haussier') {
+                if (technicalSignal === 'haussier') {
                     finalDecision = 'Entrer';
-                    advice = `Les signaux techniques sont alignés avec le sentiment macroéconomique haussier. C'est une excellente opportunité pour une position longue.`;
+                    advice = `Les signaux techniques sont alignés. C'est une excellente opportunité pour une position longue.`;
                     showEnterButton = true;
                 } else {
                     finalDecision = 'Attendre';
-                    advice = `Les signaux techniques sont mitigés ou l'environnement macroéconomique est incertain. Il est préférable d'attendre une confirmation avant d'agir.`;
+                    advice = `Les signaux techniques sont mitigés. Il est préférable d'attendre une confirmation avant d'agir.`;
                 }
 
                 decisionAnalysisDiv.innerHTML = `
@@ -730,7 +911,7 @@
                     <p class="mt-2"><strong>Stop-Loss :</strong> Placer le stop-loss à <strong>${stopLoss.toFixed(2)} USDT (${convertToEUR(stopLoss).toFixed(2)} €)</strong> pour limiter les pertes.</p>
                     <p class="mt-2"><strong>Risque potentiel :</strong> Le risque de la position est une perte de <strong>${(entryPrice - stopLoss).toFixed(2)} USDT (${convertToEUR(entryPrice - stopLoss).toFixed(2)} €)</strong> par unité. Ce risque est calculé pour correspondre à <strong>${riskPercent}%</strong> de votre capital total.</p>
                 `;
-                
+
                 if (showEnterButton) {
                     enterPositionBtnContainer.style.display = 'block';
                 } else {
@@ -744,12 +925,11 @@
                 resultsDiv.style.display = 'none';
                 decisionAnalysisDiv.innerHTML = '';
                 enterPositionBtnContainer.style.display = 'none';
-                
-                // Stop the previous follow-up if any
+
                 if (intervalId) {
                     clearInterval(intervalId);
                 }
-                currentTrade = null; // Explicitly reset the trade
+                currentTrade = null;
                 tradingStatusCard.style.display = 'none';
 
                 await fetchExchangeRate();
@@ -759,10 +939,11 @@
                 const interval = intervalSelect.value;
                 const capital = parseFloat(capitalInput.value);
                 const riskPercent = parseFloat(riskInput.value);
+                const feesPercent = parseFloat(feesInput.value);
 
-                if (isNaN(capital) || isNaN(riskPercent) || capital <= 0 || riskPercent <= 0) {
+                if (isNaN(capital) || isNaN(riskPercent) || capital <= 0 || riskPercent <= 0 || isNaN(feesPercent) || feesPercent < 0) {
                     loadingDiv.style.display = 'none';
-                    errorDiv.textContent = 'Veuillez entrer des valeurs valides pour votre capital et votre risque.';
+                    errorDiv.textContent = 'Veuillez entrer des valeurs valides pour votre capital, risque et frais.';
                     errorDiv.style.display = 'block';
                     return;
                 }
@@ -774,7 +955,7 @@
                     } else if (apiSource === 'coingecko') {
                         historicalData = await getHistoricalDataFromCoinGecko(asset, interval);
                     }
-                    
+
                     if (historicalData.length === 0) {
                         throw new Error(`Impossible de charger les données historiques depuis ${apiSource === 'binance' ? 'Binance' : 'CoinGecko'}.`);
                     }
@@ -783,8 +964,7 @@
                     const ema21 = calculateEMA(historicalData, 21);
                     const rsiData = calculateRSI(historicalData);
                     const macdData = calculateMACD(historicalData);
-                    const macroData = getMacroData();
-                    
+
                     createCharts(historicalData, asset, interval);
 
                     const lastCandle = historicalData[historicalData.length - 1];
@@ -795,7 +975,7 @@
 
                     const riskedAmount = (capital * riskPercent) / 100;
                     const priceRisk = entryPrice - stopLoss;
-                    
+
                     if (priceRisk <= 0) {
                         throw new Error('Calcul du Stop-Loss impossible. Le marché est trop volatile ou le prix d\'entrée est inférieur au Stop-Loss.');
                     }
@@ -806,9 +986,11 @@
                     const tp1 = entryPrice + (rewardPerUnit * 1.5);
                     const tp2 = entryPrice + (rewardPerUnit * 3);
 
-                    const gainTp1 = (tp1 - entryPrice) * positionSize;
+                    const totalFees = (positionValue * (feesPercent / 100)) * 2; // Entry and Exit fees
+
+                    const gainTp1 = (tp1 - entryPrice) * positionSize - totalFees;
                     const gainTp1Eur = convertToEUR(gainTp1);
-                    const gainTp2 = (tp2 - entryPrice) * positionSize;
+                    const gainTp2 = (tp2 - entryPrice) * positionSize - totalFees;
                     const gainTp2Eur = convertToEUR(gainTp2);
 
                     entryPriceSpan.textContent = entryPrice.toFixed(2);
@@ -819,6 +1001,7 @@
                     riskedAmountEurSpan.textContent = convertToEUR(riskedAmount).toFixed(2);
                     positionValueSpan.textContent = positionValue.toFixed(2);
                     positionValueEurSpan.textContent = convertToEUR(positionValue).toFixed(2);
+                    totalFeesSpan.textContent = totalFees.toFixed(2);
                     tp1Span.textContent = tp1.toFixed(2);
                     tp1EurSpan.textContent = convertToEUR(tp1).toFixed(2);
                     tp2Span.textContent = tp2.toFixed(2);
@@ -829,7 +1012,7 @@
                     gainTp2Span.textContent = gainTp2.toFixed(2);
                     gainTp2EurSpan.textContent = gainTp2Eur.toFixed(2);
 
-                    provideTechnicalAnalysis(historicalData, rsiData, ema9, ema21, macdData, entryPrice, stopLoss, riskPercent, macroData);
+                    provideTechnicalAnalysis(historicalData, rsiData, ema9, ema21, macdData, entryPrice, stopLoss, riskPercent);
 
                     loadingDiv.style.display = 'none';
                     resultsDiv.style.display = 'block';
@@ -843,7 +1026,8 @@
                         tp2: tp2,
                         riskedAmount: riskedAmount,
                         gainTp1: gainTp1,
-                        gainTp2: gainTp2
+                        gainTp2: gainTp2,
+                        totalFees: totalFees
                     };
 
                 } catch (error) {
@@ -862,7 +1046,7 @@
                 }
                 const symbol = assetSelect.value;
                 const url = `https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`;
-                
+
                 tradingStatusCard.style.display = 'block';
                 statusMessage.textContent = "Position en cours... Analysant les données en temps réel.";
 
@@ -876,17 +1060,19 @@
                         if (!response.ok) throw new Error("API Binance non disponible.");
                         const data = await response.json();
                         const currentPrice = parseFloat(data.price);
-                        
+
                         currentPriceDisplay.textContent = `Prix Actuel : ${currentPrice.toFixed(2)} USDT`;
-                        
-                        const pnl = (currentPrice - currentTrade.entryPrice) * currentTrade.positionSize;
+
+                        const pnl = (currentPrice - currentTrade.entryPrice) * currentTrade.positionSize - currentTrade.totalFees;
                         pnlDisplay.textContent = `P&L : ${pnl.toFixed(2)} USDT`;
                         pnlDisplay.style.color = pnl >= 0 ? 'green' : 'red';
-                        
+
                         if (currentPrice <= currentTrade.stopLoss) {
                             statusMessage.textContent = "ATTENTION : Stop-Loss atteint ! Sortez de votre position pour limiter les pertes.";
                             statusMessage.style.color = 'red';
                             clearInterval(intervalId);
+                            addTradeToHistory('Perte', pnl);
+                            currentTrade = null;
                         } else if (currentPrice >= currentTrade.tp1) {
                             statusMessage.textContent = "FELICITATIONS : TP1 atteint ! Envisagez de prendre des profits.";
                             statusMessage.style.color = 'green';
@@ -897,15 +1083,50 @@
                         statusMessage.textContent = "Erreur de connexion. Impossible de suivre le trade en temps réel.";
                         clearInterval(intervalId);
                     }
-                }, 5000); 
+                }, 5000);
             }
 
-            function exitTrade() {
+            function exitTrade(type) {
                 clearInterval(intervalId);
                 tradingStatusCard.style.display = 'none';
+                let finalPnl;
+                if (type === 'tp1') {
+                    finalPnl = currentTrade.gainTp1;
+                } else if (type === 'sl') {
+                    finalPnl = (currentTrade.stopLoss - currentTrade.entryPrice) * currentTrade.positionSize - currentTrade.totalFees;
+                }
+                addTradeToHistory(finalPnl >= 0 ? 'Profit' : 'Perte', finalPnl);
                 currentTrade = null;
                 statusMessage.textContent = '';
                 generateTradePlan();
+            }
+
+            function addTradeToHistory(outcome, pnl) {
+                const date = new Date().toLocaleDateString('fr-FR');
+                tradeHistory.unshift({
+                    date: date,
+                    asset: currentTrade.asset,
+                    outcome: outcome,
+                    pnl: pnl
+                });
+                renderTradeHistory();
+            }
+
+            function renderTradeHistory() {
+                if (tradeHistory.length === 0) {
+                    tradeHistoryList.innerHTML = '<p class="text-slate-500">Pas encore d\'historique de trade.</p>';
+                } else {
+                    tradeHistoryList.innerHTML = '';
+                    tradeHistory.forEach(trade => {
+                        const tradeItem = document.createElement('div');
+                        tradeItem.className = `p-2 rounded-md ${trade.pnl >= 0 ? 'bg-green-100' : 'bg-red-100'}`;
+                        tradeItem.innerHTML = `
+                            <p><strong>${trade.outcome}</strong> sur ${trade.asset} le ${trade.date}</p>
+                            <p class="text-xs">Gain/Perte : <span class="${trade.pnl >= 0 ? 'text-green-700' : 'text-red-700'}">${trade.pnl.toFixed(2)} USDT</span></p>
+                        `;
+                        tradeHistoryList.appendChild(tradeItem);
+                    });
+                }
             }
 
             function convertToEUR(usdAmount) {
@@ -918,9 +1139,9 @@
             assetSelect.addEventListener('change', generateTradePlan);
             intervalSelect.addEventListener('change', generateTradePlan);
             enterPositionBtn.addEventListener('click', startTradeFollowUp);
-            exitBtnTp1.addEventListener('click', exitTrade);
-            exitBtnSl.addEventListener('click', exitTrade);
-            
+            exitBtnTp1.addEventListener('click', () => exitTrade('tp1'));
+            exitBtnSl.addEventListener('click', () => exitTrade('sl'));
+
             window.onload = generateTradePlan;
         });
     </script>
