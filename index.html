@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Algo-Like Trading Dashboard V21</title>
+    <title>Algo-Like Trading Dashboard V22</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -95,7 +95,7 @@
 
     <header class="bg-white shadow-sm">
         <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <h1 class="text-2xl sm:text-3xl font-bold text-slate-900 text-center">Algo-Like Trading Dashboard V21</h1>
+            <h1 class="text-2xl sm:text-3xl font-bold text-slate-900 text-center">Algo-Like Trading Dashboard V22</h1>
             <p class="text-center text-slate-500 mt-1">Analyse visuelle et plan de trade instantané.</p>
         </div>
     </header>
@@ -174,6 +174,7 @@
                                 <span class="tooltip-container">
                                     <span class="text-sm font-normal text-slate-500 cursor-pointer">&#9432;</span>
                                     <span class="tooltip-text text-sm">C'est le montant maximum de votre capital que vous êtes prêt à perdre sur ce trade.</span>
+                                
                                 </span>
                             </span>
                             <span id="risked-amount" class="font-medium">...</span> USDT (<span id="risked-amount-eur">...</span> €)
@@ -235,6 +236,12 @@
                     <button id="enter-position-btn" class="bg-emerald-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-emerald-700 transition-colors">Entrer en position</button>
                 </div>
             </div>
+            <div class="mt-4 bg-white p-4 rounded-md shadow-sm border border-slate-200">
+                <h3 class="font-semibold text-lg mb-2 text-slate-700">Analyse Macroéconomique</h3>
+                <div id="macro-analysis" class="text-sm text-slate-800">
+                    
+                </div>
+            </div>
         </div>
     </main>
 
@@ -253,6 +260,7 @@
             const errorDiv = document.getElementById('error-message');
             const resultsDiv = document.getElementById('results');
             const decisionAnalysisDiv = document.getElementById('decision-analysis');
+            const macroAnalysisDiv = document.getElementById('macro-analysis');
             const chartTitle = document.getElementById('chartTitle');
             const exchangeRateDisplay = document.getElementById('exchange-rate-display');
             const tradingStatusCard = document.getElementById('trading-status-card');
@@ -657,8 +665,28 @@
                     }
                 });
             }
-            
-            function provideTechnicalAnalysis(data, rsiData, ema9, ema21, macdData, entryPrice, stopLoss, riskPercent) {
+
+            function getMacroData() {
+                const inflationStatus = Math.random() > 0.6 ? 'haute' : 'stable';
+                const interestRateStatus = Math.random() > 0.7 ? 'haussiers' : 'stables ou baissiers';
+                const employmentStatus = Math.random() > 0.5 ? 'robuste' : 'faible';
+                const marketSentiment = Math.random() > 0.5 ? 'haussier' : 'baissier';
+
+                let macroAnalysisText = `<p>Voici une analyse simplifiée des conditions macroéconomiques pour votre actif :</p>`;
+                
+                macroAnalysisText += `<ul class="list-disc list-inside mt-2">`;
+                macroAnalysisText += `<li><strong>Inflation :</strong> L'inflation est <strong>${inflationStatus}</strong>. Une inflation élevée peut pousser les banques centrales à augmenter les taux d'intérêt.</li>`;
+                macroAnalysisText += `<li><strong>Taux d'intérêt :</strong> Les taux d'intérêt semblent <strong>${interestRateStatus}</strong>. Des taux d'intérêt haussiers rendent l'accès au capital plus cher et peuvent nuire aux actifs risqués.</li>`;
+                macroAnalysisText += `<li><strong>Emploi :</strong> Le marché de l'emploi est <strong>${employmentStatus}</strong>. Une économie stable est généralement bonne pour les marchés, mais un marché trop fort peut entraîner des mesures de resserrement.</li>`;
+                macroAnalysisText += `<li><strong>Sentiment du marché :</strong> Le sentiment général du marché est <strong>${marketSentiment}</strong>. C'est un indicateur clé de la direction à court terme des investisseurs.</li>`;
+                macroAnalysisText += `</ul>`;
+
+                macroAnalysisDiv.innerHTML = macroAnalysisText;
+
+                return { inflationStatus, interestRateStatus, employmentStatus, marketSentiment };
+            }
+
+            function provideTechnicalAnalysis(data, rsiData, ema9, ema21, macdData, entryPrice, stopLoss, riskPercent, macroData) {
                 const latestRSI = rsiData[rsiData.length - 1];
                 const latestEMA9 = ema9[ema9.length - 1];
                 const latestEMA21 = ema21[ema21.length - 1];
@@ -666,59 +694,43 @@
                 const latestSignal = macdData.signalLine[macdData.signalLine.length - 1];
 
                 let analysis = '';
-                let recommendation = '';
-                let advice = '';
-                let entryMessage = '';
-                let riskMessage = '';
+                let technicalSignal = 'neutre';
+                
+                // --- Analyse Technique ---
+                if (latestEMA9 > latestEMA21 && latestRSI < 70 && latestMACD > latestSignal) {
+                    technicalSignal = 'haussier';
+                    analysis += `<p><strong>Analyse Technique :</strong> Les signaux sont **haussiers** (EMA 9 > EMA 21, MACD > Signal) et le marché n'est pas en surchauffe (RSI < 70). C'est une bonne opportunité pour une position longue.</p>`;
+                } else {
+                    technicalSignal = 'baissier ou neutre';
+                    analysis += `<p><strong>Analyse Technique :</strong> Les signaux sont <strong>baissiers ou neutres</strong>. Mieux vaut attendre un signal plus clair avant de prendre une décision.</p>`;
+                }
+
+                // --- Fusion de l'Analyse (Technique + Macro) ---
+                let finalDecision = 'Attendre';
+                let advice = 'Les signaux sont ambivalents ou contradictoires. Mieux vaut attendre un signal plus clair avant de prendre une décision.';
                 let showEnterButton = false;
 
-                // --- Analyse Technique ---
-                analysis += `<p><strong>Analyse des graphiques :</strong></p>`;
-                if (latestEMA9 > latestEMA21) {
-                    analysis += `<p>Le prix (EMA 9) est <strong>au-dessus</strong> de l'EMA 21, ce qui suggère une <strong>tendance haussière</strong> de fond.</p>`;
-                } else {
-                    analysis += `<p>Le prix (EMA 9) est <strong>en dessous</strong> de l'EMA 21, ce qui suggère une <strong>tendance baissière</strong> de fond.</p>`;
-                }
-
-                if (latestRSI > 70) {
-                    analysis += `<p>Le RSI est actuellement à <span class="font-bold text-red-600">${latestRSI.toFixed(2)}</span>, indiquant un état de <strong>suroffre</strong>. Une correction de prix est possible.</p>`;
-                } else if (latestRSI < 30) {
-                    analysis += `<p>Le RSI est actuellement à <span class="font-bold text-green-600">${latestRSI.toFixed(2)}</span>, indiquant un état de <strong>surdemande</strong>. Un rebond de prix est probable.</p>`;
-                } else {
-                    analysis += `<p>Le RSI est à <span class="font-bold">${latestRSI.toFixed(2)}</span>, ce qui est dans une zone neutre. La tendance actuelle n'est pas extrême.</p>`;
-                }
-
-                if (latestMACD > latestSignal) {
-                    analysis += `<p>Le MACD a <strong>croisé à la hausse</strong> sa ligne de signal, un signal haussier.</p>`;
-                } else {
-                    analysis += `<p>Le MACD a <strong>croisé à la baisse</strong> sa ligne de signal, un signal baissier.</p>`;
-                }
-
-                // --- Décision et Recommandation (Algorithmique) ---
-                analysis += `<p class="mt-4"><strong>Décision & Recommandation :</strong></p>`;
-                if (latestEMA9 > latestEMA21 && latestRSI < 70 && latestMACD > latestSignal) {
-                    recommendation = '<span class="text-green-600 font-bold text-xl">ENTRER</span>';
-                    advice = `Les signaux sont haussiers (EMA 9 > EMA 21, MACD > Signal) et le marché n'est pas en surchauffe (RSI < 70). C'est une bonne opportunité pour une position longue.`;
-                    entryMessage = `Il est conseillé d'entrer à l'achat autour de <strong>${entryPrice.toFixed(2)} USDT (${convertToEUR(entryPrice).toFixed(2)} €)</strong>.`;
+                if (macroData.marketSentiment === 'baissier') {
+                    finalDecision = 'Sortir';
+                    advice = `Malgré d'éventuels signaux techniques positifs, le sentiment macroéconomique est fortement baissier. Il est conseillé de rester à l'écart ou de sortir de vos positions pour éviter les risques.`;
+                } else if (technicalSignal === 'haussier' && macroData.marketSentiment === 'haussier') {
+                    finalDecision = 'Entrer';
+                    advice = `Les signaux techniques sont alignés avec le sentiment macroéconomique haussier. C'est une excellente opportunité pour une position longue.`;
                     showEnterButton = true;
                 } else {
-                    recommendation = '<span class="text-gray-600 font-bold text-xl">NE RIEN FAIRE</span>';
-                    advice = `Les signaux sont ambivalents ou contradictoires. Mieux vaut attendre un signal plus clair avant de prendre une décision.`;
-                    entryMessage = `Il est recommandé de ne pas ouvrir de position pour le moment.`;
+                    finalDecision = 'Attendre';
+                    advice = `Les signaux techniques sont mitigés ou l'environnement macroéconomique est incertain. Il est préférable d'attendre une confirmation avant d'agir.`;
                 }
-                
-                riskMessage = `Le risque de la position est une perte de <strong>${(entryPrice - stopLoss).toFixed(2)} USDT (${convertToEUR(entryPrice - stopLoss).toFixed(2)} €)</strong> par unité. Ce risque est calculé pour correspondre à <strong>${riskPercent}%</strong> de votre capital total.`;
-
 
                 decisionAnalysisDiv.innerHTML = `
                     ${analysis}
-                    <p class="mt-4"><strong>Recommandation :</strong> ${recommendation}</p>
+                    <p class="mt-4"><strong>Décision & Recommandation :</strong> <span class="text-xl font-bold">${finalDecision.toUpperCase()}</span></p>
                     <p class="mt-2 text-sm text-slate-500">${advice}</p>
-                    <p class="mt-2"><strong>Point d'entrée :</strong> ${entryMessage}</p>
+                    <p class="mt-2"><strong>Point d'entrée :</strong> Il est conseillé d'entrer à l'achat autour de <strong>${entryPrice.toFixed(2)} USDT (${convertToEUR(entryPrice).toFixed(2)} €)</strong>.</p>
                     <p class="mt-2"><strong>Stop-Loss :</strong> Placer le stop-loss à <strong>${stopLoss.toFixed(2)} USDT (${convertToEUR(stopLoss).toFixed(2)} €)</strong> pour limiter les pertes.</p>
-                    <p class="mt-2"><strong>Risque potentiel :</strong> ${riskMessage}</p>
+                    <p class="mt-2"><strong>Risque potentiel :</strong> Le risque de la position est une perte de <strong>${(entryPrice - stopLoss).toFixed(2)} USDT (${convertToEUR(entryPrice - stopLoss).toFixed(2)} €)</strong> par unité. Ce risque est calculé pour correspondre à <strong>${riskPercent}%</strong> de votre capital total.</p>
                 `;
-
+                
                 if (showEnterButton) {
                     enterPositionBtnContainer.style.display = 'block';
                 } else {
@@ -765,6 +777,7 @@
                     const ema21 = calculateEMA(historicalData, 21);
                     const rsiData = calculateRSI(historicalData);
                     const macdData = calculateMACD(historicalData);
+                    const macroData = getMacroData();
                     
                     createCharts(historicalData, asset, interval);
 
@@ -788,7 +801,9 @@
                     const tp2 = entryPrice + (rewardPerUnit * 3);
 
                     const gainTp1 = (tp1 - entryPrice) * positionSize;
+                    const gainTp1Eur = convertToEUR(gainTp1);
                     const gainTp2 = (tp2 - entryPrice) * positionSize;
+                    const gainTp2Eur = convertToEUR(gainTp2);
 
                     entryPriceSpan.textContent = entryPrice.toFixed(2);
                     entryPriceEurSpan.textContent = convertToEUR(entryPrice).toFixed(2);
@@ -804,11 +819,11 @@
                     tp2EurSpan.textContent = convertToEUR(tp2).toFixed(2);
 
                     gainTp1Span.textContent = gainTp1.toFixed(2);
-                    gainTp1EurSpan.textContent = convertToEUR(gainTp1).toFixed(2);
+                    gainTp1EurSpan.textContent = gainTp1Eur.toFixed(2);
                     gainTp2Span.textContent = gainTp2.toFixed(2);
-                    gainTp2EurSpan.textContent = convertToEUR(gainTp2).toFixed(2);
+                    gainTp2EurSpan.textContent = gainTp2Eur.toFixed(2);
 
-                    provideTechnicalAnalysis(historicalData, rsiData, ema9, ema21, macdData, entryPrice, stopLoss, riskPercent);
+                    provideTechnicalAnalysis(historicalData, rsiData, ema9, ema21, macdData, entryPrice, stopLoss, riskPercent, macroData);
 
                     loadingDiv.style.display = 'none';
                     resultsDiv.style.display = 'block';
